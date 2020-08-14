@@ -1,0 +1,226 @@
+swagger: "2.0"
+info:
+  description: "Distributed System Project - Marco Baldassarri"
+  version: "1.0.0"
+  title: "Distributed Chat with Lagom"
+  termsOfService: "http://swagger.io/terms/"
+  contact:
+    email: "marco.baldassarri2@studio.unibo.it"
+  license:
+    name: "Apache 2.0"
+    url: "http://www.apache.org/licenses/LICENSE-2.0.html"
+host: "localhost:3000"
+basePath: "/"
+tags:
+- name: "user"
+  description: "User Service endpoint. Handles a DB of logged users"
+- name: "channel"
+  description: "Channel Service endpoint. Handles a DB of chat rooms and users for each room"
+- name: "messages"
+  description: "Handles messages delivery, uses a Message Broker to subscribe to events and show the events as messages"
+schemes:
+- "http"
+paths:
+  /api/user/login/:username:
+    get:
+      tags:
+      - "user"
+      summary: "Logs user into the system or create a new user if does not exist"
+      description: ""
+      operationId: "loginUser"
+      produces:
+      - "application/json"
+      parameters:
+      - name: "username"
+        in: "query"
+        description: "The unique user name for login"
+        required: true
+        type: "string"
+      responses:
+        "200":
+          description: "OK. Successful Operation. Responses with Channel list"
+          schema:
+            type: "array"
+            items:
+              $ref: "#/definitions/Channel"
+        "400":
+          description: "Bad Request. User already exists. Please try again."
+  /api/user/logout/:username:
+    get:
+      tags:
+      - "user"
+      summary: "Logs out current logged in user session"
+      description: ""
+      operationId: "logoutUser"
+      produces:
+      - "application/json"
+      parameters:
+      - name: "username"
+        in: "query"
+        description: "The given user to log out"
+        required: true
+        type: "string"
+      responses:
+        "200":
+          description: "Ok. Successful Operation. User deleted from database"
+        "500":
+          description: "Internal Error. Username is wrong or already logged out"
+      
+  /api/channel/list:
+    get:
+      tags:
+      - "channel"
+      summary: "Returns the list of existing channels"
+      description: ""
+      operationId: "getChannels"
+      produces:
+      - "application/json"
+      responses:
+        "200":
+          description: "successful operation"
+          schema:
+            type: "array"
+            items:
+              $ref: "#/definitions/Channel"
+        "400":
+          description: "Channels not available"
+  
+  /api/channel/create:
+    post:
+      tags:
+      - "channel"
+      summary: "Channel creation"
+      description: "The user creates a new channel to talk with others about a specific topic"
+      operationId: "new-channel"
+      produces:
+      - "application/json"
+      parameters:
+      - in: body
+        name: channel
+        description: Name of the new channel
+        schema:
+         type: object
+         required:
+           - name
+         properties:
+           name:
+             type: string
+             example: "Technology"
+             description: "The list of users joined to the channel. This can be left empty when creating a new channel"
+      responses:
+        "200":
+          description: "successful operation"
+          schema:
+            type: "array"
+            items:
+              $ref: "#/definitions/ChId"
+        "400":
+          description: "Cannot create channel"     
+          
+  /api/channel/ch/:channelId:
+    post:
+      tags:
+      - "channel"
+      summary: "User picks a channel from list"
+      description: "This is actually a Channel update. User can change channel name as well as join the channel by adding himself to the channel list"
+      operationId: "pickChannelId"
+      produces:
+      - "application/json"
+      parameters:
+      - name: "channelId"
+        in: "query"
+        description: "The channel the user wants to join"
+        required: true
+        type: "string"
+      - in: body
+        name: channel
+        description: Update Channel
+        schema:
+         type: object
+         required:
+           - name
+         properties:
+           name:
+             type: string
+           users:
+             type: array
+             items: 
+              type: string
+              example: "logged-username1"
+             description: "The list of users joined to the channel. This can be left empty when updating an existing channel"
+      responses:
+        "200":
+          description: "OK"
+        "400":
+          description: "Bad Request"
+          
+          
+  /api/messages/send:
+    post:
+      tags:
+      - "messages"
+      summary: "Message Dispatcher Endpoint"
+      description: "Sends a message to a given channel. Everyone listening will get the message"
+      operationId: "messages-send"
+      produces:
+      - "application/json"
+      parameters:
+      - in: "body"
+        name: "message"
+        description: "Message to send to a given channel"
+        required: true
+        schema:
+          $ref: "#/definitions/Message"
+      responses:
+        "200":
+          description: "successful operation"
+        "500":
+          description: "Internal Error"
+  
+definitions:
+  ChId:
+    type: "object"
+    required: 
+    - "id"
+    properties:
+      id:
+        type: "string"
+        example: "a960cba5-8458-4d8b-86a4-c0a8875ca010"
+  Message:
+    type: "object"
+    required:
+    - "sender"
+    - "channel"
+    - "message"
+    properties:
+      sender:
+        type: "string"
+        example: "logged-username1"
+      channel:
+        type: "string"
+        example: "a960cba5-8458-4d8b-86a4-c0a8875ca010"
+      message:
+        type: "string"
+        example: "hello world!"
+    xml:
+      name: "Message"
+  Channel:
+    type: "object"
+    required:
+    - "id"
+    - "name"
+    - "users"
+    properties:
+      id:
+        type: "string"
+        example: "a960cba5-8458-4d8b-86a4-c0a8875ca010"
+      name:
+        type: "string"
+        example: "Hobbies"
+      users:
+        type: "array"
+        items:
+          type: string
+        example: "['logged-username1','logged-username2']"
+    xml:
+      name: "Message"
